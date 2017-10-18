@@ -1,0 +1,25 @@
+set -x
+export KW_SERVER=/pssnfs/klocwork
+#export KW_SERVER=/mnt/md0/klocwork
+export KW_BIN=$KW_SERVER/bin
+export KW_PJ_ROOT=$KW_SERVER/projects_root
+#export PATH=$PATH:pssnfs/klocwork/bin:/pssnfs/klocuser/bin:/pssnfs/klocwork/3rdparty/bin
+export PATH=$PATH:$KW_SERVER/bin:$KW_SERVER/3rdparty/bin
+#export KWSRVIP="135.252.216.211"
+export KWSRVIP="135.252.223.80"
+export KWSRVPORT=8086
+export DBPORT=2256
+export DBHOST=localhost
+unset LM_LICENSE_FILE
+export KLOCWORK_LICENSE_FILE=27000@chshsrv02.cn.lucent.com:27000@hand:27000@optics.cn.alcatel-lucent.com
+#export KLOCWORK_LICENSE_FILE=27000@optics.cn.alcatel-lucent.com
+
+alias kstart="kwservice start /pssnfs/klocwork/projects_root"
+alias kstop="kwservice stop /pssnfs/klocwork/projects_root"
+
+set +x
+#old license
+#License Server properties
+#host=pss1830lx-11
+#port=27000
+

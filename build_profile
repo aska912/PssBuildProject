@@ -1,0 +1,599 @@
+#!/bin/ksh
+
+. /home/admin1830/profile.1830 >> /dev/null
+
+# Global variables of Building Project
+BLDHOMEPATH="/home/admin1830/bin/build"
+KWTOOLPATH="$BLDHOMEPATH/kwtools"
+KW12ENV="$KWTOOLPATH/kw12env"
+LOGFILE="$BLDHOMEPATH/build.log"
+SCRIPT_NAME=""
+PRODUCT="dwdm_1830"
+BLDLOG="/tmp/daily_build.log"
+BLD_QUEUE="$BLDHOMEPATH/bld_queue"
+DOWNLOAD_QUEUE="$BLDHOMEPATH/download/download_queue"
+DOWNLOADED_LIST="$BLDHOMEPATH/download/downloaded_list"
+VIEW_STORE_PATH="/export/viewstore"
+BLD_COMPLETE_QUEUE="$BLDHOMEPATH/bld_completed_queue"
+BLD_TASK_FILES="$BLDHOMEPATH/bld_release"
+#BLD_HOSTNAME="pss1830lx-26"
+BLD_HOSTNAME="pss1830lx-27"
+BLDADMIN="admin1830"
+VOBSPATH="/vobs"
+ECPATH="/vobs/pss/node"
+LCPATH="/vobs/lc"
+
+PSS1830LX26="135.252.223.76"
+PSS1830LX27="135.252.223.80"
+
+SIMBLDSERVER=$PSS1830LX26
+MVLBLDSERVER=$PSS1830LX26
+WRBLDSERVER=$PSS1830LX27
+MKVIEWSERVER=$PSS1830LX27
+
+VIEWSERVER=$PSS1830LX26
+KWBLDSERVER=$PSS1830LX27
+
+PRODUCT_RELEASE="/home/admin1830/manage/config_specs/$PRODUCT"
+CODE_LIB="/home/admin1830/pint/cscope_dbs/dwdm_1830"
+
+# Global variables of the MH Server
+#MHSERVER="135.112.153.199"
+#MHSERVER="135.112.153.215"
+#MHSERVER="135.112.153.38"
+MHSERVER="135.104.255.45"
+MHUSER="jiemingg"
+MHLOADTMPATH="/pssnfs/jiemingg"
+MHBLDLISTPATH="/home/yangx/svt"
+
+
+# Global variables for the LOAD storage server
+LOADSERVER="135.252.216.217"
+LOADUSER="1830nei"
+SHLOADPATH="/pssnfs/1830nei"
+UBOOT_USBKEY_PATH="/tftpboot/uboot_usbkey"
+APTDLSERVER="135.252.217.53"
+APTDLUSER="jiemingg"
+APTDLPATH="/home/SVTFTP/SH_Build_Sanity/target-loads"
+
+
+LOAD_SH_SSH="ssh -o ServerAliveInterval=30 $LOADUSER@$LOADSERVER "
+LOAD_MH_SSH="ssh -o ServerAliveInterval=30 $MHUSER@$MHSERVER "
+#LOAD_APT_SSH="ssh -o ServerAliveInterval=30 $APTDLUSER@$APTDLSERVER "
+LOAD_APT_SSH="ssh $APTDLUSER@$APTDLSERVER "
+BLD_SIM_SSH="ssh -o ServerAliveInterval=30 $BLDADMIN@$SIMBLDSERVER "
+BLD_MVL_SSH="ssh -o ServerAliveInterval=30 $BLDADMIN@$MVLBLDSERVER "
+BLD_WR_SSH="ssh -o ServerAliveInterval=30 $BLDADMIN@$WRBLDSERVER "
+BLD_KW_SSH="ssh -o ServerAliveInterval=30 $BLDADMIN@$KWBLDSERVER "
+MH_SVR_SSH=$LOAD_MH_SSH
+
+# Global variables for the building screen
+BLD_SCREEN_KEY="Building"
+
+
+# For Klocwork build
+kw_build_rel="grape"
+
+# Build Name
+SIM="sim"
+MVL="85xx"
+WR="wr"
+
+SIM_LC="sim_lc"
+WR_ARMADA="wr_armada"
+WR_LC_="wrp10xx_lc"
+
+
+MKVIEW="$BLDHOMEPATH/mkview.sh"
+MKVIEW_PSS4="$BLDHOMEPATH/mkview_pss4.sh"
+BLDVIEW="$BLDHOMEPATH/bldview_screen.sh"
+SENDMAIL="$BLDHOMEPATH/sendmail2.py"
+CT="/usr/atria/bin/cleartool"
+REMOVEVIEW="/home/admin1830/manage/bin/removeview"
+
+ERR_LOG=""
+TO="jiemingg"
+
+# Return code
+NO_PID=0
+
+NOUPDATED=0
+UPDATED=200
+
+BLDFAIL=20
+BLDOK=0
+
+CTERR=100
+SCREEN_FAIL=110
+
+MAKEVIEW_FAIL=200
+
+VIEW_EXIST=300
+VIEW_NOEXIST=301
+
+RTR_COMPLETED_TASK=40
+RTR_UNCOMPLETED_TASK=41
+
+
+# alias commands
+alias ct='/usr/atria/bin/cleartool'
+alias sendmail="$BLDHOMEPATH/sendmail2.py"
+alias download_image="$BLDHOMEPATH/download_image.sh"
+
+
+# Parameters for download
+WORKTIME=1
+NOWORKTIME=0
+
+
+function release_to_build_name {
+        _rel=$1
+        case $_rel in
+                "8.2")
+                        echo "figcake "
+                        ;;
+                "8.2.2")
+                        echo "figjam "
+                        ;;
+                "9.0")
+                        echo "grape "
+                        ;;
+                "9.1")
+                        echo "grapebar"
+                        ;;
+                "9.0.1")
+                        echo "grapeape"
+                        ;;
+                "10.0")
+                        echo "kiwibar"
+                        ;;
+                "10.1")
+                        echo "kiwicake"
+                        ;;
+                *)
+                        echo ""
+                        ;;
+        esac
+}
+
+
+function build_name_to_release {
+        _bldname=$1
+        case $_bldname in
+                "figcake")
+                        echo "8.2"
+                        ;;
+                "figjam")
+                        echo "8.2.2"
+                        ;;
+                "grape")
+                        echo "9.0"
+                        ;;
+                "grapebar")
+                        echo "9.1"
+                        ;;
+                "grapeape")
+                        echo "9.0.1"
+                        ;;
+                "kiwibar")
+                        echo "10.0"
+                        ;;
+                "kiwicake")
+                        echo "10.1"
+                        ;;
+                *)
+                        echo ""
+                        ;;
+        esac
+}
+
+
+release_to_load_file(){
+        release=$1
+        case $release in
+            "fig")
+                    echo ""
+                    ;;
+            "figaro")
+                    echo "$MHBLDLISTPATH/dwdm_1830_pss8.0.2_load"
+                    ;;
+            "figbar")
+                    echo "$MHBLDLISTPATH/dwdm_1830_pss8.1_load"
+                    ;;
+            "figjam")
+                    echo "$MHBLDLISTPATH/dwdm_1830_pss8.2.2_load"
+                    ;;
+            "grapebar")
+                    echo "$MHBLDLISTPATH/dwdm_1830_pss9.1_load"
+                    ;;
+            "grapeape")
+                    echo "$MHBLDLISTPATH/dwdm_1830_pss9.0.1_load"
+                    ;;
+            "kiwibar")
+                    echo "$MHBLDLISTPATH/dwdm_1830_pss8_10.0_load"
+                    ;;
+            "kiwicake")
+                    echo "$MHBLDLISTPATH/dwdm_1830_pss8_10.1_load"
+                    ;;
+            *)
+                    echo ""
+                    ;;
+        esac
+
+}
+
+
+
+check_bld_format()
+{
+        bld=$1
+        if [[ $bld =~ ^\w+\-\d+$ ]]; then
+                #return true
+                echo true
+        else
+                #return false
+                echo false
+        fi
+}
+
+# Specify the key word for the running screen
+function screen_pid {
+        key=$*
+        pid=`screen -ls | grep "$key" | cut -d "." -f 1 | sed s/[[:space:]]//g`
+        if [[ $pid =~ ^[0-9]+$ ]]; then
+                echo $pid
+        else
+                echo $NO_PID
+        fi
+}
+
+bld_screen_pid()
+{
+        pid=`screen -ls | grep "$BLD_SCREEN_KEY" | cut -d "." -f 1 | sed s/[[:space:]]//g`
+        if [[ $pid =~ ^[0-9]+$ ]]; then
+                echo $pid
+        else
+                echo $NO_PID
+        fi
+}
+
+bld_screen_name()
+{
+        echo `screen -ls | grep "$BLD_SCREEN_KEY" | cut -d "." -f 2 | awk -F" " '{print $1 " " $2}'`
+}
+
+get_new_task_from_bld_queue()
+{
+        echo `tail -n 1 $BLD_QUEUE`
+}
+
+get_all_tasks_from_bld_queue()
+{
+        cat $BLD_QUEUE
+}
+
+join_task_into_bld_queue()
+{
+        task=$1
+        echo "$task" >> $BLD_QUEUE
+}
+
+# Task format
+#/pssnfs/roadm/dwdm_1830_switch/figbar-150616/swp/ARMADA/1830PSSECX-18.16-30
+# ==>figbar-150616
+#/pssnfs/roadm/dwdm_1830_switch/figaro-150616/swp/ARMADA/1830PSSECX-18.16-20
+# ==>figaro-150616
+#
+#Input: 
+#  $1: The load path in MH Server
+#
+#Output:
+#  if success: return basebuild
+#  if fail:    return ""
+#
+get_basebuild_from_task()
+{
+        task=$1
+        basebuild=`echo $task | awk -F "/" '{print $5}'`
+        if [ `check_bld_format $basebuild` == true ]; then
+                echo $basebuild
+        else
+                echo ""      
+        fi
+
+}
+
+
+function get_product_from_task {
+        _task=$1
+        _product=`echo $_task | awk -F"/" '{print $4}'`
+        if [ $_product == "dwdm_1830" ]; then
+                _product="dwdm_1830_switch"
+        fi
+        echo $_product
+}
+
+
+function get_loadname_from_task {
+        _task=$1
+        _load=`echo $_task | awk -F"/" '{print $NF}'`
+        echo $_load
+}
+
+
+function convert_to_view_product {
+        _product=$1
+        case $_product in
+                "dwdm_1830_switch")
+                        echo "dwdm_1830"
+                        ;;
+                *)
+                        echo $_product
+                        ;;
+        esac
+}
+
+get_load_path_list()
+{
+        
+        loadpath=$1
+        if [ `echo $loadpath | wc -c` -le 1 ]; then
+                echo 
+                return 1
+        fi
+        loadlist=`ssh $MHUSER@$MHSERVER cat $loadpath`
+        if [ $? -ne 0 ]; then
+                echo 
+        else
+                echo "$loadlist"
+        fi
+}
+
+
+get_new_load_path()
+{
+        loadpath=$1
+        if [ `echo $loadpath | wc -c` -le 1 ]; then
+                echo 
+                return 1
+        fi
+        loadlist=`ssh $MHUSER@$MHSERVER tail -n 1 $loadpath`
+        if [ $? -ne 0 ]; then
+                echo 
+        else
+                echo "$loadlist"
+        fi
+}
+
+
+function check_completed_task {
+        _task=$1
+        for completed_task in `cat $BLD_COMPLETE_QUEUE`
+        do
+                if [ "$_task" == "$completed_task" ]; then
+                        _product=`get_product_from_task $_task`
+                        _bld_id=`get_basebuild_from_task $_task`
+                        cat $BLD_QUEUE | grep $_task
+                        if [ $? -eq 0 ]; then
+                                sed -i "/$_product\/$_bld_id/d" $BLD_QUEUE
+                                if [ $? -eq 0 ]; then
+                                        ECHO "Removed $_task from bld_queue."
+                                fi
+                        fi
+                        return $RTR_COMPLETED_TASK
+                fi
+        done
+        return $RTR_UNCOMPLETED_TASK
+}
+
+
+report_error()
+{
+        subject="Trigger daily building fail"
+        body=$ERR_LOG
+        $BLDHOMEPATH/sendmail2.py "$TO" "$subject" "$body"
+}
+
+function record_log {
+        log_txt=$1
+        echo $log_txt
+        if [ -f $LOGFILE ]; then
+                tm=`current_time`
+                echo "[$tm] $log_txt" >> $LOGFILE
+        fi
+}
+
+function print_err {
+        ERR_LOG=$1
+        #print_err="Error: $"
+        #record_log ""
+        ECHO "Error: $ERR_LOG"
+        
+}
+
+function strlen {
+        string=$1
+        echo `echo -n $string | wc -c`
+}
+
+function current_time {
+        echo `date '+%Y-%m-%d %k:%M:%S'`
+}
+
+function record_log {
+        log=$@
+        tm=`current_time`
+        echo "[ $tm $SCRIPT_NAME ] $log" >> $LOGFILE        
+}
+
+function ECHO {
+        echo_str=$@
+        echo $echo_str
+        record_log $echo_str
+}
+
+function check_bld_err {
+        log_file=$1
+        tail -n 10 $log_file | grep "abort_check" >> /dev/null 
+        if [ $? -eq 0 ]; then
+                return $BLDFAIL 
+        else
+                return $BLDOK
+        fi
+        
+}
+
+#function check_bld_world_log {
+#        worldlog_file=$1
+#        if [[ ! $worldlog_file =~ ^(world)\..*\.(log)$ ]]; then
+#                return 1
+#        fi
+#        world=`echo $worldlog_file | cut -d "." -f 1`
+#        rule=`echo $worldlog_file | cut -d "." -f 2`
+#        log=`echo $worldlog_file | cut -d "." -f 3`
+#        tail -n 10 $worldlog_file | grep "abort_check" >> /dev/null
+#        if [ $? -eq 0 ]; then
+#            mv "$world.$rule.$log" "$world.$rule.fail.$log"
+#        else
+#            mv "$world.$rule.$log" "$world.$rule.ok.$log"
+#        fi
+#
+#}
+
+function get_the_latest_build {
+        rel=$1
+        prod=$PRODUCT_RELEASE
+        basebuild=`ls $prod | grep "$rel-" | tail -n 1 | cut -d"-" -f 2,3`
+        if [[ $basebuild =~ \w+\-\d+ ]]; then
+                echo $basebuild
+        else
+                echo
+        fi
+}
+
+function get_script_name {
+        sf=$1
+        if [[ $sf =~ \.\/ ]]; then
+                sf=`echo $sf | sed 's/\.\///g'`
+        fi
+
+        if [[ $sf =~ ^\/ ]]; then
+                sf=`echo $sf | awk -F '/' '{print $NF}'`
+        fi  
+        SCRIPT_NAME=$sf
+}
+
+
+function is_exist_view {
+        _view=$1
+        if [ -z "$_view" ]; then
+                echo $VIEW_NOEXIST
+        fi
+        $CT lsview -long $_view 2>/dev/null
+        if [ $? -ne 0 ]; then
+            echo $VIEW_NOEXIST
+        else
+            echo $VIEW_EXIST
+        fi
+}
+
+function get_uuid_view {
+        _view=$1
+        if [ "$_view" = "" ]; then
+                echo ""
+                return 1
+        fi
+        # View uuid: 58103fc2.882111e5.9f07.3c:d9:2b:57:32:c4
+        _uuid=`($CT lsview -long $_view | grep "View uuid" | awk '{print $3}') 2>/dev/null`
+        if [ $? -ne 0 ]; then
+                _uuid=""
+        fi
+        echo $_uuid
+}
+
+
+function get_global_path_view {
+        _view=$1
+        if [ "$_view" = "" ]; then
+                echo ""
+                return 1
+        fi
+        # Global path: /net/pss1830lx-26/export/viewstore/admin1830-dwdm_1830-grape-151215-sim-bld.vws 
+        _path=`($CT lsview -long $_view | grep "Global path"| awk '{print $3}') 2>/dev/null`
+        if [ $? -ne 0 ]; then
+                _path=""
+        fi
+        echo $_path
+}
+
+
+function unreg_uuid {
+        _uuid=$1
+        if [ -z "$_uuid" ]; then
+                return 1
+        fi
+        $CT unreg -view -uuid $_uuid
+        if [ $? -ne 0 ]; then
+                return 1
+        fi
+        return 0
+}
+
+
+function rmtag_view {
+        _view=$1
+        if [ -z "$_view" ]; then
+                return 1
+        fi
+        $CT rmtag -view $_view
+        if [ $? -ne 0 ]; then
+                return 1
+        fi
+        return 0
+}
+
+function is_download_time {
+        #set -x
+
+        weekday_name=`date +%a`
+        if [ "$weekday_name" == "Sat" -o "$weekday_name" == "Sun" ]; then
+                echo $NOWORKTIME
+                return
+        fi
+
+        current_sec=`date +%s`
+        current_day=`date +%Y%m%d`
+        tomorrow_day=`date -d tomorrow +"%Y%m%d"`
+        #begin_noon_sec=`date +%s -d "$current_day 11:30:00"`
+        #end_noon_sec=`date +%s -d "$current_day 12:30:00"`
+        begin_offwork_sec=`date +%s -d "$current_day 17:30:00"`
+        end_offwork_sec=`date +%s -d "$tomorrow_day 08:30:00"`
+
+        #if [ $current_sec -le `date +%s -d "$current_day 8:00:00"` ]; then
+        #       echo 1
+        #       return
+        #fi
+
+        #if [ $current_sec -ge $begin_noon_sec -a $current_sec -le $end_noon_sec -o \
+        #     $current_sec -ge $begin_offwork_sec -a $current_sec -le $end_offwork_sec ]; then
+
+        if [ $current_sec -ge $begin_offwork_sec -a $current_sec -le $end_offwork_sec ]; then
+                echo $NOWORKTIME
+        else
+                echo $WORKTIME
+        fi
+}
+
+function remove_rec_from_download_queue {
+        _loadname=$1
+        sed -i "/$_loadname/d" $DOWNLOAD_QUEUE
+}
+
+function add_downloaded_list {
+        _package=$1
+        echo "$_package" >> $DOWNLOADED_LIST
+}
+
+
+
+

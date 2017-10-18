@@ -1,0 +1,17 @@
+
+#echo "Setting-up for Klocwork 2017 on the Nokia 1830 project...."
+
+export KW_SERVER=/pssnfs/klocwork
+export KW_BIN=$KW_SERVER/bin
+export KW_PJ_ROOT=$KW_SERVER/projects_root
+export KW_TOOLS_PATH=/home/admin1830/bin/build/kwtools
+export PATH=$PATH:$KW_SERVER/bin:$KW_SERVER/3rdparty/bin:/opt/KwDAT/bin:$KW_TOOLS_PATH
+export KWSRVIP="135.252.223.80"
+export KWSRVPORT=8086
+export DBPORT=3306
+export DBHOST=localhost
+unset LM_LICENSE_FILE
+#export KLOCWORK_LICENSE_FILE=27000@chshsrv02.cn.lucent.com:27000@hand:27000@optics.cn.alcatel-lucent.com
+export KLOCWORK_LICENSE_FILE=27000@hand
+
+#echo "Setup Done"
