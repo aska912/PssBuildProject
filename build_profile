@@ -8,7 +8,7 @@ KWTOOLPATH="$BLDHOMEPATH/kwtools"
 KW12ENV="$KWTOOLPATH/kw12env"
 LOGFILE="$BLDHOMEPATH/build.log"
 SCRIPT_NAME=""
-PRODUCT="dwdm_1830"
+PRODUCT=""
 BLDLOG="/tmp/daily_build.log"
 BLD_QUEUE="$BLDHOMEPATH/bld_queue"
 DOWNLOAD_QUEUE="$BLDHOMEPATH/download/download_queue"
@@ -23,8 +23,8 @@ VOBSPATH="/vobs"
 ECPATH="/vobs/pss/node"
 LCPATH="/vobs/lc"
 
-PSS1830LX26="135.252.223.76"
-PSS1830LX27="135.252.223.80"
+PSS1830LX26=""
+PSS1830LX27=""
 
 SIMBLDSERVER=$PSS1830LX26
 MVLBLDSERVER=$PSS1830LX26
@@ -38,23 +38,20 @@ PRODUCT_RELEASE="/home/admin1830/manage/config_specs/$PRODUCT"
 CODE_LIB="/home/admin1830/pint/cscope_dbs/dwdm_1830"
 
 # Global variables of the MH Server
-#MHSERVER="135.112.153.199"
-#MHSERVER="135.112.153.215"
-#MHSERVER="135.112.153.38"
-MHSERVER="135.104.255.45"
-MHUSER="jiemingg"
-MHLOADTMPATH="/pssnfs/jiemingg"
-MHBLDLISTPATH="/home/yangx/svt"
+MHSERVER=""
+MHUSER=""
+MHLOADTMPATH="/pssnfs/"
+MHBLDLISTPATH="/home/y/svt"
 
 
 # Global variables for the LOAD storage server
-LOADSERVER="135.252.216.217"
-LOADUSER="1830nei"
-SHLOADPATH="/pssnfs/1830nei"
+LOADSERVER=""
+LOADUSER=""
+SHLOADPATH="/pssnfs/"
 UBOOT_USBKEY_PATH="/tftpboot/uboot_usbkey"
-APTDLSERVER="135.252.217.53"
-APTDLUSER="jiemingg"
-APTDLPATH="/home/SVTFTP/SH_Build_Sanity/target-loads"
+APTDLSERVER=""
+APTDLUSER=""
+APTDLPATH="/home/target-loads"
 
 
 LOAD_SH_SSH="ssh -o ServerAliveInterval=30 $LOADUSER@$LOADSERVER "
@@ -92,7 +89,7 @@ CT="/usr/atria/bin/cleartool"
 REMOVEVIEW="/home/admin1830/manage/bin/removeview"
 
 ERR_LOG=""
-TO="jiemingg"
+TO=""
 
 # Return code
 NO_PID=0
