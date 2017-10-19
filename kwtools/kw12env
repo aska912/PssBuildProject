@@ -1,5 +1,4 @@
-
-#echo "Setting-up for Klocwork 2017 on the Nokia 1830 project...."
+#!/bin/ksh
 
 export KW_SERVER=/pssnfs/klocwork
 export KW_BIN=$KW_SERVER/bin
@@ -11,7 +10,5 @@ export KWSRVPORT=8086
 export DBPORT=3306
 export DBHOST=localhost
 unset LM_LICENSE_FILE
-#export KLOCWORK_LICENSE_FILE=27000@chshsrv02.cn.lucent.com:27000@hand:27000@optics.cn.alcatel-lucent.com
 export KLOCWORK_LICENSE_FILE=27000@hand
 
-#echo "Setup Done"
